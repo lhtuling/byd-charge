@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BYD 兆瓦级闪充极致仿真 By:空空空</title>
+    <title>BYD 兆瓦级闪充极致仿真</title>
     <style>
         :root {
             --bg: #030508;
@@ -229,19 +229,9 @@
         }
 
         @keyframes shake {
-
-            0%,
-            100% {
-                transform: translate(0, 0);
-            }
-
-            25% {
-                transform: translate(-1.5px, 1.5px);
-            }
-
-            75% {
-                transform: translate(1.5px, -1.5px);
-            }
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-1.5px, 1.5px); }
+            75% { transform: translate(1.5px, -1.5px); }
         }
 
         .extreme-shake {
@@ -312,7 +302,7 @@
             </div>
 
             <div class="node" id="node-car" style="border-left: 4px solid var(--car)">
-                <div class="tag" style="background:var(--car); color:#000">腾势Z9GT(顶配122.5 kWh) 10%-97%</div>
+                <div class="tag" style="background:var(--car); color:#000">26款海狮06 (82.73 kWh) 10%-97%</div>
                 <div class="val-row">
                     <div class="val" id="ui-car-soc" style="color:var(--car)">10.0%</div>
                     <div class="val" style="color:var(--car)" id="ui-total-pwr">0<span class="unit">kW</span></div>
@@ -329,7 +319,7 @@
 
         <div class="action-area">
             <button class="main-btn" id="main-btn" onclick="toggleSim()">启动 1500kW 压力测试</button>
-            <div class="info-bar">BYD兆瓦级闪充仿真系统 By:空空空 (海狮06首批车主)</div>
+            <div class="info-bar" id="ui-sys-info">BYD兆瓦级闪充仿真系统 By:空空空 (海狮06首批车主)</div>
         </div>
     </div>
 
@@ -343,11 +333,11 @@
             maxKwh: 370,
             curKwh: 370,
             carSoc: 10,
-            carTotal: 122.5,
+            carTotal: 82.73,
             isCharging: false,
             count: 0,
             timer: null,
-            nextCarTime: 0 // 用于控制1秒间隔
+            nextCarTime: 0 
         };
 
         function getCurvePower(soc) {
@@ -366,10 +356,7 @@
                 p = 400 - (300 * ((soc - 90) / 7));
                 info = "🏁 阶段4: 涓流保护模式，即将充电完成";
             }
-            return {
-                p: Math.max(0, p),
-                info
-            };
+            return { p: Math.max(0, p), info };
         }
 
         const ctx1 = document.getElementById('canvas-lightning-1').getContext('2d');
@@ -430,8 +417,9 @@
         };
 
         function resetUI() {
-            document.getElementById('main-btn').innerText = "启动 1500kW 压力测试";
-            document.getElementById('main-btn').classList.remove('stop');
+            const btn = document.getElementById('main-btn');
+            btn.innerText = "启动 1500kW 压力测试";
+            btn.classList.remove('stop');
             document.getElementById('ui-count').innerText = "0";
             document.getElementById('ui-st-out').innerText = "0";
             document.getElementById('ui-total-pwr').innerHTML = `0<span class="unit">kW</span>`;
@@ -446,25 +434,49 @@
             document.getElementById('ui-st-bar').style.width = Math.max(0, pct) + "%";
         }
 
-        window.toggleSim = function () {
-            state.isRunning = !state.isRunning;
+        // 停止模拟的统一入口
+        function stopSim(reason = "") {
+            state.isRunning = false;
+            if (state.timer) clearTimeout(state.timer);
             const btn = document.getElementById('main-btn');
-            btn.innerText = state.isRunning ? "停止模拟运行" : "启动 1500kW 压力测试";
-            btn.classList.toggle('stop', state.isRunning);
+            btn.innerText = "启动 1500kW 压力测试";
+            btn.classList.remove('stop');
+            drawLightning(ctx1, 0);
+            drawLightning(ctx2, 0);
+            document.getElementById('ui-total-pwr').innerHTML = `0<span class="unit">kW</span>`;
+            document.getElementById('ui-st-out').innerText = "0";
+            document.getElementById('node-car').classList.remove('extreme-shake');
+            if(reason) document.getElementById('ui-curve-info').innerText = reason;
+        }
 
+        window.toggleSim = function () {
             if (state.isRunning) {
-                // 点击瞬间开始，不等待
+                stopSim("用户停止了模拟测试");
+            } else {
+                // 如果储能已经空了，点击启动先重置
+                if (state.curKwh <= 0.5) {
+                    state.curKwh = state.maxKwh;
+                    state.count = 0;
+                }
+                state.isRunning = true;
+                const btn = document.getElementById('main-btn');
+                btn.innerText = "停止模拟运行";
+                btn.classList.add('stop');
                 state.nextCarTime = Date.now();
                 loop();
             }
         }
 
         function loop() {
-            if (!state.isRunning) {
-                drawLightning(ctx1, 0);
-                drawLightning(ctx2, 0);
+            if (!state.isRunning) return;
+
+            // 核心逻辑：如果储能电量耗尽，自动停止
+            if (state.curKwh <= 0.1) {
+                stopSim("⚠️ 警告：储能阵列电量已耗尽，测试自动停止！");
+                updateStorageUI();
                 return;
             }
+
             const dt = 0.05;
             const now = Date.now();
 
@@ -472,16 +484,14 @@
                 document.getElementById('ui-total-pwr').innerHTML = `0<span class="unit">kW</span>`;
                 document.getElementById('node-car').classList.remove('extreme-shake');
 
-                // 储能柜补能 (蓝色闪电)
                 if (state.curKwh < state.maxKwh) {
                     state.curKwh += (state.gridLimit / 60) * dt;
                     drawLightning(ctx1, state.gridLimit, '#00d2ff', 560);
                 } else {
                     drawLightning(ctx1, 0);
                 }
-                drawLightning(ctx2, 0); // 无黄色闪电
+                drawLightning(ctx2, 0);
 
-                // 检查是否到达1秒间隔
                 if (now >= state.nextCarTime) {
                     state.isCharging = true;
                     state.carSoc = 10;
@@ -492,6 +502,8 @@
                 let curve = getCurvePower(state.carSoc);
                 let targetPwr = curve.p;
                 let stNeedPwr = targetPwr - state.gridLimit;
+                
+                // 储能实际能给出的功率（不能超过剩余电量）
                 let actualStOut = state.curKwh > 0.5 ? stNeedPwr : 0;
                 let finalPwr = state.gridLimit + actualStOut;
 
@@ -514,7 +526,6 @@
                     state.isCharging = false;
                     state.count++;
                     document.getElementById('ui-count').innerText = state.count;
-                    // 设置下一辆车进站时间为 1秒后
                     state.nextCarTime = Date.now() + 1000;
                 }
             }
