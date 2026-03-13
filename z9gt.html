@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BYD 兆瓦级闪充极致仿真 By:空空空</title>
+    <style>
+        :root {
+            --bg: #030508;
+            --card: #0d1117;
+            --grid: #00d2ff;
+            --storage: #00ff88;
+            --car: #ffff00;
+            --text: #ffffff;
+            --danger: #ff4d4d;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            background: #000;
+            color: var(--text);
+            font-family: -apple-system, "SF Pro Text", "PingFang SC", sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-container {
+            height: 72vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            border-bottom: 2px solid #111;
+            padding-bottom: 10px;
+        }
+
+        .header-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 12px 15px 5px;
+        }
+
+        .stat-card {
+            background: #111;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-left: 4px solid currentColor;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #777;
+            margin-bottom: 2px;
+        }
+
+        .stat-value-big {
+            font-size: 34px;
+            font-weight: 900;
+            font-family: 'Tahoma', sans-serif;
+            line-height: 1.1;
+        }
+
+        .config-compact {
+            display: flex;
+            padding: 5px 15px;
+            gap: 15px;
+        }
+
+        .config-item {
+            flex: 1;
+        }
+
+        .config-label-min {
+            font-size: 10px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .opt-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        .opt-btn {
+            flex: 1;
+            padding: 6px 0;
+            font-size: 11px;
+            background: #161b22;
+            color: #666;
+            border: 1px solid #333;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .opt-btn.active-g {
+            border-color: var(--grid);
+            color: var(--grid);
+            background: rgba(0, 210, 255, 0.1);
+        }
+
+        .opt-btn.active-s {
+            border-color: var(--storage);
+            color: var(--storage);
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 5px 20px;
+        }
+
+        .node {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #21262d;
+            position: relative;
+            z-index: 2;
+        }
+
+        .tag {
+            position: absolute;
+            top: -10px;
+            right: 12px;
+            font-size: 14px;
+            padding: 2px 10px;
+            border-radius: 4px;
+            font-weight: 900;
+        }
+
+        .flow-container {
+            height: 45px;
+            position: relative;
+        }
+
+        canvas {
+            position: absolute;
+            top: -45px;
+            left: 0;
+            width: 100%;
+            height: 130px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .val-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .val {
+            font-size: 26px;
+            font-weight: 900;
+        }
+
+        .unit {
+            font-size: 12px;
+            opacity: 0.6;
+            margin-left: 3px;
+        }
+
+        .label-text {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .progress-wapper {
+            height: 5px;
+            background: #000;
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+            border: 1px solid #222;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .action-area {
+            padding: 5px 20px 10px;
+        }
+
+        .main-btn {
+            width: 100%;
+            padding: 18px;
+            border-radius: 12px;
+            border: none;
+            background: var(--grid);
+            color: #000;
+            font-weight: 900;
+            font-size: 18px;
+            box-shadow: 0 5px 20px rgba(0, 210, 255, 0.4);
+            transition: 0.2s;
+        }
+
+        .main-btn.stop {
+            background: var(--danger);
+            color: #fff;
+            box-shadow: 0 5px 20px rgba(255, 77, 77, 0.4);
+        }
+
+        .info-bar {
+            text-align: center;
+            font-size: 10px;
+            color: #444;
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+
+        .bottom-gap {
+            flex: 1;
+            background: #000;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            25% {
+                transform: translate(-1.5px, 1.5px);
+            }
+
+            75% {
+                transform: translate(1.5px, -1.5px);
+            }
+        }
+
+        .extreme-shake {
+            animation: shake 0.05s infinite;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-container">
+        <!-- 顶部数据 -->
+        <div class="header-stats">
+            <div class="stat-card" style="color: var(--storage);">
+                <div class="stat-label">储能阵列实时出力 (kW)</div>
+                <div class="stat-value-big" id="ui-st-out">0</div>
+            </div>
+            <div class="stat-card" style="color: #fff;">
+                <div class="stat-label">累计闪充台数</div>
+                <div class="stat-value-big" id="ui-count">0</div>
+            </div>
+        </div>
+
+        <!-- 配置按钮 -->
+        <div class="config-compact">
+            <div class="config-item">
+                <div class="config-label-min">电网变压器容量配置</div>
+                <div class="opt-group">
+                    <div class="opt-btn active-g" id="g-160" onclick="changeConfig('grid', 160)">160kW</div>
+                    <div class="opt-btn" id="g-560" onclick="changeConfig('grid', 560)">560kW</div>
+                </div>
+            </div>
+            <div class="config-item">
+                <div class="config-label-min">储能阵列堆叠规模</div>
+                <div class="opt-group">
+                    <div class="opt-btn active-s" id="s-2" onclick="changeConfig('storage', 2)">双储能柜</div>
+                    <div class="opt-btn" id="s-4" onclick="changeConfig('storage', 4)">四储能柜</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stage">
+            <div class="node">
+                <div class="tag" style="background:var(--grid); color:#000">国家电网补能输入</div>
+                <div class="val-row">
+                    <div class="val" id="ui-grid-pwr" style="color:var(--grid)">160<span class="unit">kW</span></div>
+                    <div class="label-text">实时入户总功率</div>
+                </div>
+            </div>
+
+            <div class="flow-container">
+                <canvas id="canvas-lightning-1"></canvas>
+            </div>
+
+            <div class="node" id="node-storage" style="border-left: 4px solid var(--storage)">
+                <div class="tag" id="ui-storage-tag" style="background:var(--storage); color:#000">比亚迪刀片电池储能阵列</div>
+                <div class="val-row">
+                    <div class="val" id="ui-st-soc" style="color:var(--storage)">100%</div>
+                    <div class="label-text" id="ui-st-kwh">370.0<span class="unit">kWh</span></div>
+                </div>
+                <div class="progress-wapper">
+                    <div class="progress-fill" id="ui-st-bar" style="background:var(--storage)"></div>
+                </div>
+            </div>
+
+            <div class="flow-container">
+                <canvas id="canvas-lightning-2"></canvas>
+            </div>
+
+            <div class="node" id="node-car" style="border-left: 4px solid var(--car)">
+                <div class="tag" style="background:var(--car); color:#000">腾势Z9GT(顶配122.5 kWh) 10%-97%</div>
+                <div class="val-row">
+                    <div class="val" id="ui-car-soc" style="color:var(--car)">10.0%</div>
+                    <div class="val" style="color:var(--car)" id="ui-total-pwr">0<span class="unit">kW</span></div>
+                </div>
+                <div class="progress-wapper">
+                    <div class="progress-fill" id="ui-car-bar" style="background:var(--car); width:0%"></div>
+                </div>
+                <div id="ui-curve-info"
+                    style="margin-top:8px; font-weight: 900; color:var(--car); font-size: 11px; min-height: 14px;">
+                    系统准备就绪，点击下方按钮开始测试
+                </div>
+            </div>
+        </div>
+
+        <div class="action-area">
+            <button class="main-btn" id="main-btn" onclick="toggleSim()">启动 1500kW 压力测试</button>
+            <div class="info-bar">BYD兆瓦级闪充仿真系统 By:空空空 (海狮06首批车主)</div>
+        </div>
+    </div>
+
+    <div class="bottom-gap"></div>
+
+    <script>
+        let state = {
+            isRunning: false,
+            gridLimit: 160,
+            cabCount: 2,
+            maxKwh: 370,
+            curKwh: 370,
+            carSoc: 10,
+            carTotal: 122.5,
+            isCharging: false,
+            count: 0,
+            timer: null,
+            nextCarTime: 0 // 用于控制1秒间隔
+        };
+
+        function getCurvePower(soc) {
+            let p = 0;
+            let info = "";
+            if (soc < 20) {
+                p = 600 + (1500 - 600) * ((soc - 10) / 10);
+                info = "⚡ 阶段1: 功率瞬时爆发，冲击 1.5MW 峰值";
+            } else if (soc < 70) {
+                p = 1400 + Math.sin(Date.now() / 300) * 100;
+                info = "🔥 阶段2: 兆瓦级恒流模式，储能阵列全速出力";
+            } else if (soc < 90) {
+                p = soc < 82 ? 1100 : 750;
+                info = "⚖️ 阶段3: 接近电芯电压上限，执行阶梯降流";
+            } else {
+                p = 400 - (300 * ((soc - 90) / 7));
+                info = "🏁 阶段4: 涓流保护模式，即将充电完成";
+            }
+            return {
+                p: Math.max(0, p),
+                info
+            };
+        }
+
+        const ctx1 = document.getElementById('canvas-lightning-1').getContext('2d');
+        const ctx2 = document.getElementById('canvas-lightning-2').getContext('2d');
+
+        function resize() {
+            [ctx1, ctx2].forEach(ctx => {
+                ctx.canvas.width = ctx.canvas.offsetWidth * devicePixelRatio;
+                ctx.canvas.height = ctx.canvas.offsetHeight * devicePixelRatio;
+                ctx.scale(devicePixelRatio, devicePixelRatio);
+            });
+        }
+        window.onresize = resize;
+        resize();
+
+        function drawLightning(ctx, pwr, color, maxPwr = 1500) {
+            const w = ctx.canvas.width / devicePixelRatio;
+            const h = ctx.canvas.height / devicePixelRatio;
+            ctx.clearRect(0, 0, w, h);
+            if (pwr <= 10) return;
+            const ratio = Math.min(pwr / maxPwr, 1);
+            ctx.shadowBlur = 12 * ratio;
+            ctx.shadowColor = color;
+            ctx.strokeStyle = `rgba(255, 255, 255, ${0.5 + ratio * 0.5})`;
+            ctx.lineWidth = 1.5 + ratio * 4;
+            ctx.beginPath();
+            let curX = w / 2;
+            let curY = 0;
+            ctx.moveTo(curX, curY);
+            for (let i = 1; i <= 7; i++) {
+                curX += (Math.random() - 0.5) * (ratio * 50);
+                curY = (h / 7) * i;
+                ctx.lineTo(curX, curY);
+            }
+            ctx.stroke();
+        }
+
+        window.changeConfig = function (type, val) {
+            state.isRunning = false;
+            if (state.timer) clearTimeout(state.timer);
+            if (type === 'grid') {
+                state.gridLimit = val;
+                document.getElementById('g-160').classList.toggle('active-g', val === 160);
+                document.getElementById('g-560').classList.toggle('active-g', val === 560);
+                document.getElementById('ui-grid-pwr').innerHTML = `${val}<span class="unit">kW</span>`;
+            } else {
+                state.cabCount = val;
+                state.maxKwh = val * 185;
+                document.getElementById('s-2').classList.toggle('active-s', val === 2);
+                document.getElementById('s-4').classList.toggle('active-s', val === 4);
+                document.getElementById('ui-storage-tag').innerText = `比亚迪 ${val}柜储能阵列`;
+            }
+            state.curKwh = state.maxKwh;
+            state.count = 0;
+            state.carSoc = 10;
+            state.isCharging = false;
+            resetUI();
+        };
+
+        function resetUI() {
+            document.getElementById('main-btn').innerText = "启动 1500kW 压力测试";
+            document.getElementById('main-btn').classList.remove('stop');
+            document.getElementById('ui-count').innerText = "0";
+            document.getElementById('ui-st-out').innerText = "0";
+            document.getElementById('ui-total-pwr').innerHTML = `0<span class="unit">kW</span>`;
+            document.getElementById('ui-curve-info').innerText = "系统准备就绪，点击下方按钮开始测试";
+            updateStorageUI();
+        }
+
+        function updateStorageUI() {
+            let pct = (state.curKwh / state.maxKwh) * 100;
+            document.getElementById('ui-st-soc').innerText = Math.max(0, pct).toFixed(1) + "%";
+            document.getElementById('ui-st-kwh').innerHTML = `${Math.max(0, state.curKwh).toFixed(1)}<span class="unit">kWh</span>`;
+            document.getElementById('ui-st-bar').style.width = Math.max(0, pct) + "%";
+        }
+
+        window.toggleSim = function () {
+            state.isRunning = !state.isRunning;
+            const btn = document.getElementById('main-btn');
+            btn.innerText = state.isRunning ? "停止模拟运行" : "启动 1500kW 压力测试";
+            btn.classList.toggle('stop', state.isRunning);
+
+            if (state.isRunning) {
+                // 点击瞬间开始，不等待
+                state.nextCarTime = Date.now();
+                loop();
+            }
+        }
+
+        function loop() {
+            if (!state.isRunning) {
+                drawLightning(ctx1, 0);
+                drawLightning(ctx2, 0);
+                return;
+            }
+            const dt = 0.05;
+            const now = Date.now();
+
+            if (!state.isCharging) {
+                document.getElementById('ui-total-pwr').innerHTML = `0<span class="unit">kW</span>`;
+                document.getElementById('node-car').classList.remove('extreme-shake');
+
+                // 储能柜补能 (蓝色闪电)
+                if (state.curKwh < state.maxKwh) {
+                    state.curKwh += (state.gridLimit / 60) * dt;
+                    drawLightning(ctx1, state.gridLimit, '#00d2ff', 560);
+                } else {
+                    drawLightning(ctx1, 0);
+                }
+                drawLightning(ctx2, 0); // 无黄色闪电
+
+                // 检查是否到达1秒间隔
+                if (now >= state.nextCarTime) {
+                    state.isCharging = true;
+                    state.carSoc = 10;
+                } else {
+                    document.getElementById('ui-curve-info').innerText = `正在调度下一辆车... (等待 1s)`;
+                }
+            } else {
+                let curve = getCurvePower(state.carSoc);
+                let targetPwr = curve.p;
+                let stNeedPwr = targetPwr - state.gridLimit;
+                let actualStOut = state.curKwh > 0.5 ? stNeedPwr : 0;
+                let finalPwr = state.gridLimit + actualStOut;
+
+                if (finalPwr > 1000) document.getElementById('node-car').classList.add('extreme-shake');
+                else document.getElementById('node-car').classList.remove('extreme-shake');
+
+                state.carSoc += ((finalPwr / 60) * dt / state.carTotal) * 100;
+                state.curKwh -= (actualStOut / 60) * dt;
+
+                document.getElementById('ui-total-pwr').innerHTML = `${finalPwr.toFixed(0)}<span class="unit">kW</span>`;
+                document.getElementById('ui-st-out').innerText = actualStOut.toFixed(0);
+                document.getElementById('ui-car-soc').innerText = Math.min(97, state.carSoc).toFixed(1) + "%";
+                document.getElementById('ui-car-bar').style.width = ((state.carSoc - 10) / 87 * 100) + "%";
+                document.getElementById('ui-curve-info').innerText = curve.info;
+
+                drawLightning(ctx1, state.gridLimit, '#00d2ff', 560);
+                drawLightning(ctx2, finalPwr, '#ffff00', 1500);
+
+                if (state.carSoc >= 97) {
+                    state.isCharging = false;
+                    state.count++;
+                    document.getElementById('ui-count').innerText = state.count;
+                    // 设置下一辆车进站时间为 1秒后
+                    state.nextCarTime = Date.now() + 1000;
+                }
+            }
+            updateStorageUI();
+            state.timer = setTimeout(loop, 50);
+        }
+        updateStorageUI();
+    </script>
+</body>
+
+</html>
