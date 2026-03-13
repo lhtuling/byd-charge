@@ -130,11 +130,10 @@
             z-index: 2;
         }
 
-        /* 标签改为左上角 */
         .tag {
             position: absolute;
             top: -10px;
-            left: 12px; /* 关键修改：从 right 改为 left */
+            left: 12px;
             font-size: 14px;
             padding: 2px 10px;
             border-radius: 4px;
@@ -230,9 +229,19 @@
         }
 
         @keyframes shake {
-            0%, 100% { transform: translate(0, 0); }
-            25% { transform: translate(-1.5px, 1.5px); }
-            75% { transform: translate(1.5px, -1.5px); }
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            25% {
+                transform: translate(-1.5px, 1.5px);
+            }
+
+            75% {
+                transform: translate(1.5px, -1.5px);
+            }
         }
 
         .extreme-shake {
@@ -276,7 +285,6 @@
 
         <div class="stage">
             <div class="node">
-                <!-- 标签在左上角 -->
                 <div class="tag" style="background:var(--grid); color:#000">国家电网补能输入</div>
                 <div class="val-row">
                     <div class="val" id="ui-grid-pwr" style="color:var(--grid)">160<span class="unit">kW</span></div>
@@ -289,7 +297,6 @@
             </div>
 
             <div class="node" id="node-storage" style="border-left: 4px solid var(--storage)">
-                <!-- 标签在左上角 -->
                 <div class="tag" id="ui-storage-tag" style="background:var(--storage); color:#000">比亚迪刀片电池储能阵列</div>
                 <div class="val-row">
                     <div class="val" id="ui-st-soc" style="color:var(--storage)">100%</div>
@@ -305,7 +312,6 @@
             </div>
 
             <div class="node" id="node-car" style="border-left: 4px solid var(--car)">
-                <!-- 标签在左上角 -->
                 <div class="tag" style="background:var(--car); color:#000">26款海狮06 (82.73 kWh) 10%-97%</div>
                 <div class="val-row">
                     <div class="val" id="ui-car-soc" style="color:var(--car)">10.0%</div>
@@ -341,7 +347,7 @@
             isCharging: false,
             count: 0,
             timer: null,
-            nextCarTime: 0 
+            nextCarTime: 0
         };
 
         function getCurvePower(soc) {
@@ -360,7 +366,10 @@
                 p = 400 - (300 * ((soc - 90) / 7));
                 info = "🏁 阶段4: 涓流保护模式，即将充电完成";
             }
-            return { p: Math.max(0, p), info };
+            return {
+                p: Math.max(0, p),
+                info
+            };
         }
 
         const ctx1 = document.getElementById('canvas-lightning-1').getContext('2d');
@@ -433,13 +442,16 @@
 
         function updateStorageUI() {
             let pct = (state.curKwh / state.maxKwh) * 100;
-            document.getElementById('ui-st-soc').innerText = Math.max(0, pct).toFixed(1) + "%";
+            // 只要电量小于 0.01 就强制显示 0
+            if (state.curKwh < 0.01) pct = 0;
+            document.getElementById('ui-st-soc').innerText = pct.toFixed(1) + "%";
             document.getElementById('ui-st-kwh').innerHTML = `${Math.max(0, state.curKwh).toFixed(1)}<span class="unit">kWh</span>`;
-            document.getElementById('ui-st-bar').style.width = Math.max(0, pct) + "%";
+            document.getElementById('ui-st-bar').style.width = pct + "%";
         }
 
         function stopSim(reason = "") {
             state.isRunning = false;
+            state.isCharging = false;
             if (state.timer) clearTimeout(state.timer);
             const btn = document.getElementById('main-btn');
             btn.innerText = "启动 1500kW 压力测试";
@@ -449,14 +461,15 @@
             document.getElementById('ui-total-pwr').innerHTML = `0<span class="unit">kW</span>`;
             document.getElementById('ui-st-out').innerText = "0";
             document.getElementById('node-car').classList.remove('extreme-shake');
-            if(reason) document.getElementById('ui-curve-info').innerText = reason;
+            if (reason) document.getElementById('ui-curve-info').innerText = reason;
         }
 
         window.toggleSim = function () {
             if (state.isRunning) {
                 stopSim("用户停止了模拟测试");
             } else {
-                if (state.curKwh <= 0.5) {
+                // 如果储能已经空了，点击启动先重置
+                if (state.curKwh <= 0.1) {
                     state.curKwh = state.maxKwh;
                     state.count = 0;
                 }
@@ -472,13 +485,15 @@
         function loop() {
             if (!state.isRunning) return;
 
-            if (state.curKwh <= 0.1) {
-                stopSim("⚠️ 警告：储能阵列电量已耗尽，测试自动停止！");
+            // 【强制检测1】循环开始即检测，防止逻辑漏洞
+            if (state.curKwh <= 0) {
+                state.curKwh = 0;
                 updateStorageUI();
+                stopSim("⚠️ 警告：储能阵列电量已耗尽，测试自动停止！");
                 return;
             }
 
-            const dt = 0.05;
+            const dt = 0.15;
             const now = Date.now();
 
             if (!state.isCharging) {
@@ -503,15 +518,26 @@
                 let curve = getCurvePower(state.carSoc);
                 let targetPwr = curve.p;
                 let stNeedPwr = targetPwr - state.gridLimit;
-                
-                let actualStOut = state.curKwh > 0.5 ? stNeedPwr : 0;
+
+                // 允许耗尽到 0
+                let actualStOut = state.curKwh > 0 ? stNeedPwr : 0;
                 let finalPwr = state.gridLimit + actualStOut;
 
                 if (finalPwr > 1000) document.getElementById('node-car').classList.add('extreme-shake');
                 else document.getElementById('node-car').classList.remove('extreme-shake');
 
                 state.carSoc += ((finalPwr / 60) * dt / state.carTotal) * 100;
+
+                // 执行电量扣除
                 state.curKwh -= (actualStOut / 60) * dt;
+
+                // 【强制检测2】扣除后立刻检测并强行终止
+                if (state.curKwh <= 0) {
+                    state.curKwh = 0;
+                    updateStorageUI();
+                    stopSim("⚠️ 警告：储能阵列电量已耗尽，测试自动停止！");
+                    return;
+                }
 
                 document.getElementById('ui-total-pwr').innerHTML = `${finalPwr.toFixed(0)}<span class="unit">kW</span>`;
                 document.getElementById('ui-st-out').innerText = actualStOut.toFixed(0);
