@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BYD 兆瓦级闪充极致仿真</title>
+    <title>BYD 兆瓦级闪充极致仿真 By:空空空</title>
     <style>
         :root {
             --bg: #030508;
@@ -32,8 +32,6 @@
             flex-direction: column;
         }
 
-        /* 核心包装容器：占高度72% */
-
         .main-container {
             height: 72vh;
             display: flex;
@@ -42,8 +40,6 @@
             border-bottom: 2px solid #111;
             padding-bottom: 10px;
         }
-
-        /* 1. 顶部数据卡片 */
 
         .header-stats {
             display: grid;
@@ -72,8 +68,6 @@
             font-family: 'Tahoma', sans-serif;
             line-height: 1.1;
         }
-
-        /* 2. 配置按钮 */
 
         .config-compact {
             display: flex;
@@ -120,8 +114,6 @@
             background: rgba(0, 255, 136, 0.1);
         }
 
-        /* 3. 仿真舞台 */
-
         .stage {
             flex: 1;
             display: flex;
@@ -142,7 +134,7 @@
             position: absolute;
             top: -10px;
             right: 12px;
-            font-size: 13px;
+            font-size: 14px;
             padding: 2px 10px;
             border-radius: 4px;
             font-weight: 900;
@@ -200,8 +192,6 @@
             box-shadow: 0 0 10px currentColor;
         }
 
-        /* 4. 操作区 */
-
         .action-area {
             padding: 5px 20px 10px;
         }
@@ -232,8 +222,6 @@
             margin-top: 8px;
             letter-spacing: 1px;
         }
-
-        /* 底部30%留白 */
 
         .bottom-gap {
             flex: 1;
@@ -277,7 +265,7 @@
             </div>
         </div>
 
-        <!-- 配置选项 -->
+        <!-- 配置按钮 -->
         <div class="config-compact">
             <div class="config-item">
                 <div class="config-label-min">电网变压器容量配置</div>
@@ -295,9 +283,7 @@
             </div>
         </div>
 
-        <!-- 仿真主体 -->
         <div class="stage">
-            <!-- 节点1 -->
             <div class="node">
                 <div class="tag" style="background:var(--grid); color:#000">国家电网补能输入</div>
                 <div class="val-row">
@@ -306,12 +292,10 @@
                 </div>
             </div>
 
-            <!-- 蓝色闪电 (电网->储能) -->
             <div class="flow-container">
                 <canvas id="canvas-lightning-1"></canvas>
             </div>
 
-            <!-- 节点2 -->
             <div class="node" id="node-storage" style="border-left: 4px solid var(--storage)">
                 <div class="tag" id="ui-storage-tag" style="background:var(--storage); color:#000">比亚迪刀片电池储能阵列</div>
                 <div class="val-row">
@@ -323,14 +307,12 @@
                 </div>
             </div>
 
-            <!-- 黄色闪电 (储能->车辆) -->
             <div class="flow-container">
                 <canvas id="canvas-lightning-2"></canvas>
             </div>
 
-            <!-- 节点3 -->
             <div class="node" id="node-car" style="border-left: 4px solid var(--car)">
-                <div class="tag" style="background:var(--car); color:#000">腾势 Z9GT 兆瓦级超充</div>
+                <div class="tag" style="background:var(--car); color:#000">腾势Z9GT(顶配122.5 kWh) 10%-97%</div>
                 <div class="val-row">
                     <div class="val" id="ui-car-soc" style="color:var(--car)">10.0%</div>
                     <div class="val" style="color:var(--car)" id="ui-total-pwr">0<span class="unit">kW</span></div>
@@ -340,19 +322,17 @@
                 </div>
                 <div id="ui-curve-info"
                     style="margin-top:8px; font-weight: 900; color:var(--car); font-size: 11px; min-height: 14px;">
-                    系统准备就绪，等待车辆进站...
+                    系统准备就绪，点击下方按钮开始测试
                 </div>
             </div>
         </div>
 
-        <!-- 操作区 -->
         <div class="action-area">
             <button class="main-btn" id="main-btn" onclick="toggleSim()">启动 1500kW 压力测试</button>
             <div class="info-bar">BYD兆瓦级闪充仿真系统 By:空空空 (海狮06首批车主)</div>
         </div>
     </div>
 
-    <!-- 底部30%黑区 -->
     <div class="bottom-gap"></div>
 
     <script>
@@ -366,7 +346,8 @@
             carTotal: 122.5,
             isCharging: false,
             count: 0,
-            timer: null
+            timer: null,
+            nextCarTime: 0 // 用于控制1秒间隔
         };
 
         function getCurvePower(soc) {
@@ -404,7 +385,6 @@
         window.onresize = resize;
         resize();
 
-        // 绘制函数
         function drawLightning(ctx, pwr, color, maxPwr = 1500) {
             const w = ctx.canvas.width / devicePixelRatio;
             const h = ctx.canvas.height / devicePixelRatio;
@@ -455,7 +435,7 @@
             document.getElementById('ui-count').innerText = "0";
             document.getElementById('ui-st-out').innerText = "0";
             document.getElementById('ui-total-pwr').innerHTML = `0<span class="unit">kW</span>`;
-            document.getElementById('ui-curve-info').innerText = "系统准备就绪，等待车辆进站...";
+            document.getElementById('ui-curve-info').innerText = "系统准备就绪，点击下方按钮开始测试";
             updateStorageUI();
         }
 
@@ -471,7 +451,12 @@
             const btn = document.getElementById('main-btn');
             btn.innerText = state.isRunning ? "停止模拟运行" : "启动 1500kW 压力测试";
             btn.classList.toggle('stop', state.isRunning);
-            if (state.isRunning) loop();
+
+            if (state.isRunning) {
+                // 点击瞬间开始，不等待
+                state.nextCarTime = Date.now();
+                loop();
+            }
         }
 
         function loop() {
@@ -481,18 +466,27 @@
                 return;
             }
             const dt = 0.05;
+            const now = Date.now();
+
             if (!state.isCharging) {
                 document.getElementById('ui-total-pwr').innerHTML = `0<span class="unit">kW</span>`;
-                document.getElementById('ui-curve-info').innerText = "等待下一台腾势 Z9GT 进站...";
                 document.getElementById('node-car').classList.remove('extreme-shake');
+
+                // 储能柜补能 (蓝色闪电)
                 if (state.curKwh < state.maxKwh) {
                     state.curKwh += (state.gridLimit / 60) * dt;
                     drawLightning(ctx1, state.gridLimit, '#00d2ff', 560);
+                } else {
+                    drawLightning(ctx1, 0);
                 }
-                drawLightning(ctx2, 0);
-                if (Math.random() < 0.04) {
+                drawLightning(ctx2, 0); // 无黄色闪电
+
+                // 检查是否到达1秒间隔
+                if (now >= state.nextCarTime) {
                     state.isCharging = true;
                     state.carSoc = 10;
+                } else {
+                    document.getElementById('ui-curve-info').innerText = `正在调度下一辆车... (等待 1s)`;
                 }
             } else {
                 let curve = getCurvePower(state.carSoc);
@@ -513,15 +507,15 @@
                 document.getElementById('ui-car-bar').style.width = ((state.carSoc - 10) / 87 * 100) + "%";
                 document.getElementById('ui-curve-info').innerText = curve.info;
 
-                // 蓝色补能闪电
                 drawLightning(ctx1, state.gridLimit, '#00d2ff', 560);
-                // 黄色闪充闪电
                 drawLightning(ctx2, finalPwr, '#ffff00', 1500);
 
                 if (state.carSoc >= 97) {
                     state.isCharging = false;
                     state.count++;
                     document.getElementById('ui-count').innerText = state.count;
+                    // 设置下一辆车进站时间为 1秒后
+                    state.nextCarTime = Date.now() + 1000;
                 }
             }
             updateStorageUI();
