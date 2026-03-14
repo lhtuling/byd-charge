@@ -33,6 +33,60 @@
             overflow: hidden;
         }
 
+        /* 响应式布局 */
+
+        .app-container {
+            width: 100%;
+            height: 100vh;
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                max-width: 100%;
+            }
+
+            .main-container {
+                height: 70vh;
+            }
+
+            .settings-panel {
+                height: 30vh;
+                padding: 6px 10px;
+            }
+
+            .guns-container {
+                flex-direction: row;
+                gap: 4px;
+            }
+
+            .gun-node {
+                padding: 6px;
+            }
+
+            .opt-group {
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            .opt-btn {
+                min-width: 70px;
+                font-size: 11px;
+                padding: 3px 0;
+                color: #fff;
+            }
+        }
+
         /* 储能柜枯竭弹窗（无遮罩） */
 
         #energy-modal {
@@ -158,8 +212,8 @@
             flex: 0 1 auto;
             display: flex;
             flex-direction: column;
-            padding: 2px 15px;
-            overflow-y: auto;
+            padding: 8px 15px 2px 15px;
+            overflow: visible;
         }
 
         .node {
@@ -214,6 +268,12 @@
             color: #8b949e;
         }
 
+        .power-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+
         .guns-container {
             display: flex;
             gap: 8px;
@@ -231,6 +291,7 @@
             line-height: 1.1;
             margin-bottom: 4px;
             overflow: hidden;
+            text-align: right;
         }
 
         .progress-wapper {
@@ -249,10 +310,12 @@
 
         .action-area {
             padding: 5px 15px;
+            display: flex;
+            gap: 8px;
         }
 
         .main-btn {
-            width: 100%;
+            flex: 1;
             padding: 14px;
             border-radius: 10px;
             border: none;
@@ -276,6 +339,47 @@
             gap: 4px;
             border-top: 1px solid #222;
             overflow-y: auto;
+            max-height: 40vh;
+            position: relative;
+        }
+
+        .settings-panel::before {
+            content: "⬆️ 向上滑动查看更多配置";
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #666;
+            background: #0d1117;
+            padding: 2px 8px;
+            border-radius: 10px;
+            opacity: var(--show-before, 0);
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 100;
+            margin-top: -20px;
+            /* 向上偏移，确保不被遮挡 */
+        }
+
+        .settings-panel::after {
+            content: "⬇️ 向下滑动查看更多配置";
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #666;
+            background: #0d1117;
+            padding: 2px 8px;
+            border-radius: 10px;
+            opacity: var(--show-after, 0.8);
+            transition: opacity 0.3s ease;
+        }
+
+        .settings-panel.no-scroll::before,
+        .settings-panel.no-scroll::after {
+            display: none;
         }
 
         .opt-group {
@@ -289,9 +393,9 @@
             flex: 1;
             min-width: 65px;
             padding: 4px 0;
-            font-size: 9px;
+            font-size: 11px;
             background: #161b22;
-            color: #666;
+            color: #fff;
             border: 1px solid #333;
             border-radius: 4px;
             text-align: center;
@@ -334,546 +438,682 @@
 
 <body>
 
-    <div id="energy-modal">
-        <div class="modal-emoji">🪫</div>
-        <div class="modal-title">储能柜枯竭</div>
-        <div class="modal-text">储能系统电量已见底，无法维持当前功率。测试已自动暂停。</div>
-        <button class="modal-btn" onclick="closeEnergyModal()">维持现状</button>
-    </div>
+    <div class="app-container">
+        <div id="energy-modal">
+            <div class="modal-emoji">🪫</div>
+            <div class="modal-title">储能柜枯竭</div>
+            <div class="modal-text">储能系统电量已见底，无法维持当前功率。测试已自动暂停。</div>
+            <button class="modal-btn" onclick="closeEnergyModal()">切换为：枯竭后继续</button>
+        </div>
 
-    <div id="bankrupt-modal">
-        <div class="modal-box">
-            <div class="modal-emoji">💀</div>
-            <div class="modal-title">站点倒闭破产！</div>
-            <div class="modal-text">由于排队超过 20 辆，客户集体差评投诉，您的充电站被迫关停！</div>
-            <button class="modal-btn" style="background:#fff; color:#000" onclick="closeBankruptModal()">重新开业</button>
-        </div>
-    </div>
-
-    <div class="revenue-bar">
-        <div class="rev-item">
-            <div class="rev-label">仿真运营时间</div>
-            <div class="rev-val" id="ui-sim-time">0 天 0 小时 0 分</div>
-        </div>
-        <div class="rev-item">
-            <div class="rev-label">累计服务费 (¥0.5/度)</div>
-            <div class="rev-val" id="ui-revenue">¥0.00</div>
-        </div>
-    </div>
-
-    <div class="header-stats">
-        <div class="stat-card" style="color: var(--storage);">
-            <div class="stat-label">储能出力 (kW)</div>
-            <div class="stat-value-big" id="ui-st-out">0</div>
-        </div>
-        <div class="stat-card" style="color: #fff;">
-            <div class="stat-label">累计闪充 (台)</div>
-            <div class="stat-value-big" id="ui-total-count">0</div>
-        </div>
-    </div>
-
-    <div class="stage">
-        <div class="node">
-            <div class="tag" style="background:var(--grid); color:#000">国家电网输入</div>
-            <div class="val-row">
-                <div class="val" id="ui-grid-pwr" style="color:var(--grid)">160<span class="unit">kW</span></div>
-                <div class="label-text">实时输入负荷</div>
+        <div id="bankrupt-modal">
+            <div class="modal-box">
+                <div class="modal-emoji">💀</div>
+                <div class="modal-title">站点倒闭破产！</div>
+                <div class="modal-text">由于排队超过 100 辆，客户集体差评投诉，您的充电站被迫关停！</div>
+                <button class="modal-btn" style="background:#fff; color:#000"
+                    onclick="closeBankruptModal()">重新开业</button>
             </div>
         </div>
-        <div class="flow-container"><canvas id="cvs-1"></canvas></div>
 
-        <div class="node" id="node-storage" style="border-left: 4px solid var(--storage)">
-            <div class="tag" id="ui-st-tag" style="background:var(--storage); color:#000">比亚迪 2柜储能阵列</div>
-            <div class="val-row">
-                <div class="val" id="ui-st-soc" style="color:var(--storage)">100%</div>
-                <div class="label-text" id="ui-st-kwh">370.0 kWh</div>
-            </div>
-            <div class="progress-wapper">
-                <div class="progress-fill" id="ui-st-bar" style="background:var(--storage)"></div>
-            </div>
-        </div>
-        <div class="flow-container"><canvas id="cvs-2"></canvas></div>
-
-        <div class="node" style="border-left: 4px solid #ff6b6b;">
-            <div class="tag" style="background:#ff6b6b; color:#000">充电堆总功率 (1500kW 均衡)</div>
-            <div class="val-row">
-                <div class="val" style="color:#ff6b6b" id="ui-total-pwr">0<span class="unit">kW</span></div>
-                <div id="ui-sys-msg" style="font-size: 10px; color:#ff6b6b; font-weight:900;">准备就绪</div>
-            </div>
-            <div class="progress-wapper">
-                <div class="progress-fill" id="ui-total-bar" style="background:#ff6b6b; width:0%"></div>
-            </div>
-        </div>
-        <div class="flow-container"><canvas id="cvs-3"></canvas></div>
-
-        <div class="guns-container">
-            <div class="node gun-node" id="node-gun-A" style="border-left: 4px solid var(--car)">
-                <div class="tag" style="background:var(--car); color:#000">A 枪</div>
-                <div class="car-model-min" id="ui-car-A-model">等待车辆</div>
-                <div class="val-row">
-                    <div class="val" id="ui-car-A-soc" style="color:var(--car); font-size:16px;">--</div>
-                    <div class="val" id="ui-car-A-pwr" style="color:var(--car); font-size:16px;">0<span
-                            class="unit">kW</span></div>
+        <div class="main-content">
+            <div class="revenue-bar">
+                <div class="rev-item">
+                    <div class="rev-label">仿真运营时间</div>
+                    <div class="rev-val" id="ui-sim-time">0 天 0 小时 0 分</div>
                 </div>
-                <div class="progress-wapper">
-                    <div class="progress-fill" id="ui-car-A-bar" style="background:var(--car); width:0%"></div>
-                </div>
-                <div id="ui-car-A-info" style="font-size: 9px; color: var(--car); font-weight: 900;">待机</div>
-            </div>
-            <div class="node gun-node" id="node-gun-B" style="border-left: 4px solid var(--car)">
-                <div class="tag" style="background:var(--car); color:#000">B 枪</div>
-                <div class="car-model-min" id="ui-car-B-model">等待车辆</div>
-                <div class="val-row">
-                    <div class="val" id="ui-car-B-soc" style="color:var(--car); font-size:16px;">--</div>
-                    <div class="val" id="ui-car-B-pwr" style="color:var(--car); font-size:16px;">0<span
-                            class="unit">kW</span></div>
-                </div>
-                <div class="progress-wapper">
-                    <div class="progress-fill" id="ui-car-B-bar" style="background:var(--car); width:0%"></div>
-                </div>
-                <div id="ui-car-B-info" style="font-size: 9px; color: var(--car); font-weight: 900;">待机</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="action-area">
-        <button class="main-btn" id="main-btn" onclick="toggleSim()">启动 1500kW 压力测试</button>
-    </div>
-
-    <div class="settings-panel">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-            <div>
-                <div style="font-size:9px; color:#555; margin-bottom:2px">变压器容量</div>
-                <div class="opt-group">
-                    <div class="opt-btn active-g" id="g-160" onclick="changeGrid(160)">160kW</div>
-                    <div class="opt-btn" id="g-560" onclick="changeGrid(560)">560kW</div>
+                <div class="rev-item">
+                    <div class="rev-label">累计服务费 (¥0.5/度)</div>
+                    <div class="rev-val" id="ui-revenue">¥0.00</div>
                 </div>
             </div>
-            <div>
-                <div style="font-size:9px; color:#555; margin-bottom:2px">储能规模</div>
-                <div class="opt-group">
-                    <div class="opt-btn active-s" id="s-2" onclick="changeStorage(2)">2柜</div>
-                    <div class="opt-btn" id="s-4" onclick="changeStorage(4)">4柜</div>
-                    <div class="opt-btn" id="s-6" onclick="changeStorage(6)">6柜</div>
-                    <div class="opt-btn" id="s-8" onclick="changeStorage(8)">8柜</div>
-                    <div class="opt-btn" id="s-10" onclick="changeStorage(10)">10柜</div>
+
+            <div class="header-stats">
+                <div class="stat-card" style="color: var(--storage);">
+                    <div class="stat-label">储能出力 (kW)</div>
+                    <div class="stat-value-big" id="ui-st-out">0</div>
                 </div>
+                <div class="stat-card" style="color: #fff;">
+                    <div class="stat-label">累计闪充 (台)</div>
+                    <div class="stat-value-big" id="ui-total-count">0</div>
+                </div>
+            </div>
+
+            <div class="stage">
+                <div class="node" style="border-left: 4px solid var(--grid)">
+                    <div class="tag" style="background:var(--grid); color:#000">⚡ 国家电网输入</div>
+                    <div class="val-row">
+                        <div class="val" id="ui-grid-pwr" style="color:var(--grid)">160<span class="unit">kW</span>
+                        </div>
+                        <div class="label-text">实时输入负荷</div>
+                    </div>
+                </div>
+                <div class="flow-container"><canvas id="cvs-1"></canvas></div>
+
+                <div class="power-row">
+                    <div class="node" id="node-storage" style="border-left: 4px solid var(--storage); flex: 1;">
+                        <div class="tag" id="ui-st-tag" style="background:var(--storage); color:#000">🔋 比亚迪 2柜储能阵列
+                        </div>
+                        <div class="val-row">
+                            <div class="val" id="ui-st-soc" style="color:var(--storage)">100%</div>
+                            <div class="label-text" id="ui-st-kwh">370.0 kWh</div>
+                        </div>
+                        <div class="progress-wapper">
+                            <div class="progress-fill" id="ui-st-bar" style="background:var(--storage)"></div>
+                        </div>
+                    </div>
+                    <div class="flow-container"><canvas id="cvs-2"></canvas></div>
+                    <div class="node" style="border-left: 4px solid #ff6b6b; flex: 1;">
+                        <div class="val-row">
+                            <div class="val" style="color:#ff6b6b" id="ui-total-pwr">0<span class="unit">kW</span></div>
+                            <div id="ui-sys-msg" style="font-size: 10px; color:#ff6b6b; font-weight:900;">准备就绪</div>
+                        </div>
+                        <div class="progress-wapper">
+                            <div class="progress-fill" id="ui-total-bar" style="background:#ff6b6b; width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flow-container"><canvas id="cvs-3"></canvas></div>
+
+                <div class="guns-container">
+                    <div class="node gun-node" id="node-gun-A" style="border-left: 4px solid var(--car)">
+                        <div class="tag" style="background:var(--car); color:#000">🔋 A 枪</div>
+                        <div class="car-model-min" id="ui-car-A-model">等待车辆</div>
+                        <div class="val-row">
+                            <div class="val" id="ui-car-A-soc" style="color:var(--car); font-size:16px;">--</div>
+                            <div class="val" id="ui-car-A-pwr" style="color:var(--car); font-size:16px;">0<span
+                                    class="unit">kW</span></div>
+                        </div>
+                        <div class="progress-wapper">
+                            <div class="progress-fill" id="ui-car-A-bar" style="background:var(--car); width:0%"></div>
+                        </div>
+                        <div id="ui-car-A-info" style="font-size: 12px; color: var(--car); font-weight: 900;">⏸️ 待机
+                        </div>
+                    </div>
+                    <div class="node gun-node" id="node-gun-B" style="border-left: 4px solid var(--car)">
+                        <div class="tag" style="background:var(--car); color:#000">🔋 B 枪</div>
+                        <div class="car-model-min" id="ui-car-B-model">等待车辆</div>
+                        <div class="val-row">
+                            <div class="val" id="ui-car-B-soc" style="color:var(--car); font-size:16px;">--</div>
+                            <div class="val" id="ui-car-B-pwr" style="color:var(--car); font-size:16px;">0<span
+                                    class="unit">kW</span></div>
+                        </div>
+                        <div class="progress-wapper">
+                            <div class="progress-fill" id="ui-car-B-bar" style="background:var(--car); width:0%"></div>
+                        </div>
+                        <div id="ui-car-B-info" style="font-size: 12px; color: var(--car); font-weight: 900;">⏸️ 待机
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-area">
+                <button class="main-btn" id="main-btn" onclick="toggleSim()">启动 1500kW 压力测试</button>
+                <button class="main-btn stop" id="reset-btn" onclick="resetSystem()"
+                    style="display: none;">停止并清零</button>
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-            <div>
-                <div style="font-size:9px; color:#555; margin-bottom:2px">枯竭逻辑</div>
-                <div class="opt-group">
-                    <div class="opt-btn" id="pm-false" onclick="setPauseMode(false)">继续</div>
-                    <div class="opt-btn active-s" id="pm-true" onclick="setPauseMode(true)">暂停</div>
+        <div class="settings-panel">
+            <div class="settings-content">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <div>
+                        <div style="font-size:9px; color:#555; margin-bottom:2px">⚡ 变压器容量</div>
+                        <div class="opt-group">
+                            <div class="opt-btn active-g" id="g-160" onclick="changeGrid(160)">160kW</div>
+                            <div class="opt-btn" id="g-560" onclick="changeGrid(560)">560kW</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:9px; color:#555; margin-bottom:2px">🔋 储能规模</div>
+                        <div class="opt-group">
+                            <div class="opt-btn active-s" id="s-2" onclick="changeStorage(2)">2柜</div>
+                            <div class="opt-btn" id="s-4" onclick="changeStorage(4)">4柜</div>
+                            <div class="opt-btn" id="s-6" onclick="changeStorage(6)">6柜</div>
+                            <div class="opt-btn" id="s-8" onclick="changeStorage(8)">8柜</div>
+                            <div class="opt-btn" id="s-10" onclick="changeStorage(10)">10柜</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div>
-                <div style="font-size:9px; color:#555; margin-bottom:2px">时间倍速</div>
-                <div class="opt-group">
-                    <div class="opt-btn active-g" id="speed-1" onclick="setTimeSpeed(1)">1x</div>
-                    <div class="opt-btn" id="speed-2" onclick="setTimeSpeed(2)">2x</div>
-                    <div class="opt-btn" id="speed-3" onclick="setTimeSpeed(3)">3x</div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                    <div>
+                        <div style="font-size:9px; color:#555; margin-bottom:2px">⚠️ 枯竭逻辑</div>
+                        <div class="opt-group">
+                            <div class="opt-btn" id="pm-false" onclick="setPauseMode(false)">继续</div>
+                            <div class="opt-btn active-s" id="pm-true" onclick="setPauseMode(true)">暂停</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:9px; color:#555; margin-bottom:2px">⏱️ 时间倍速</div>
+                        <div class="opt-group">
+                            <div class="opt-btn active-g" id="speed-1" onclick="setTimeSpeed(1)">1x</div>
+                            <div class="opt-btn" id="speed-2" onclick="setTimeSpeed(2)">2x</div>
+                            <div class="opt-btn" id="speed-3" onclick="setTimeSpeed(3)">3x</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:9px; color:#555; margin-bottom:2px">🚗 车辆频率</div>
+                        <div class="opt-group">
+                            <div class="opt-btn active-g" id="int-1" onclick="setIntervalMode(1)">高频</div>
+                            <div class="opt-btn" id="int-2" onclick="setIntervalMode(2)">中频</div>
+                            <div class="opt-btn" id="int-3" onclick="setIntervalMode(3)">低频</div>
+                            <div class="opt-btn" id="int-4" onclick="setIntervalMode(4)">极低</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div>
-                <div style="font-size:9px; color:#555; margin-bottom:2px">车辆频率</div>
-                <div class="opt-group">
-                    <div class="opt-btn active-g" id="int-1" onclick="setIntervalMode(1)">高频</div>
-                    <div class="opt-btn" id="int-2" onclick="setIntervalMode(2)">中频</div>
-                    <div class="opt-btn" id="int-3" onclick="setIntervalMode(3)">低频</div>
-                    <div class="opt-btn" id="int-4" onclick="setIntervalMode(4)">极低</div>
-                </div>
+
+                <div style="font-size:9px; color:#555; margin-bottom:2px">🚙 车型选择</div>
+                <div class="opt-group" id="car-type-btns"></div>
             </div>
         </div>
 
-        <div style="font-size:9px; color:#555; margin-bottom:2px">车型选择</div>
-        <div class="opt-group" id="car-type-btns"></div>
-    </div>
+        <script>
+            const allCars = [{
+                name: "海狮 06EV 闪充款",
+                battery: 82.7,
+                maxP: 1500
+            }, {
+                name: "腾势 Z9GT 纯电",
+                battery: 122.5,
+                maxP: 1500
+            }, {
+                name: "仰望 U7 2026款",
+                battery: 150.0,
+                maxP: 1500
+            }, {
+                name: "方程豹钛 7EV",
+                battery: 100.0,
+                maxP: 1500
+            }, {
+                name: "比亚迪宋Ultra EV",
+                battery: 82.73,
+                maxP: 1500
+            }, {
+                name: "理想 ONE 2020款",
+                battery: 40.5,
+                maxP: 60
+            }, {
+                name: "风光 E3 增程版",
+                battery: 17.3,
+                maxP: 30
+            }, {
+                name: "东风奕派 eπ008 增程",
+                battery: 39.1,
+                maxP: 91
+            }, {
+                name: "五菱宏光新能源 增程",
+                battery: 17.7,
+                maxP: 30
+            }, {
+                name: "北京 BJ60 新能源",
+                battery: 37.6,
+                maxP: 60
+            }, {
+                name: "宋 Pro DM-i 2025款",
+                battery: 18.3,
+                maxP: 40
+            }, {
+                name: "吉利星越 L Hi·P",
+                battery: 41.2,
+                maxP: 60
+            }, {
+                name: "理想 L7 Air",
+                battery: 42.8,
+                maxP: 80
+            }];
 
-    <script>
-        const allCars = [{
-            name: "海狮 06EV 闪充款",
-            battery: 82.7,
-            maxP: 1500
-        }, {
-            name: "腾势 Z9GT 纯电",
-            battery: 122.5,
-            maxP: 1500
-        }, {
-            name: "仰望 U7 2026款",
-            battery: 150.0,
-            maxP: 1500
-        }, {
-            name: "方程豹钛 7EV",
-            battery: 100.0,
-            maxP: 1500
-        }, {
-            name: "理想 ONE 2020款",
-            battery: 40.5,
-            maxP: 60
-        }, {
-            name: "风光 E3 增程版",
-            battery: 17.3,
-            maxP: 30
-        }, {
-            name: "东风奕派 eπ008 增程",
-            battery: 39.1,
-            maxP: 91
-        }, {
-            name: "五菱宏光新能源 增程",
-            battery: 17.7,
-            maxP: 30
-        }, {
-            name: "北京 BJ60 新能源",
-            battery: 37.6,
-            maxP: 60
-        }, {
-            name: "宋 Pro DM-i 2025款",
-            battery: 18.3,
-            maxP: 40
-        }, {
-            name: "吉利星越 L Hi·P",
-            battery: 41.2,
-            maxP: 60
-        }, {
-            name: "理想 L7 Air",
-            battery: 42.8,
-            maxP: 80
-        }];
-
-        const carTypeLists = {
-            "26款海狮06": ["海狮 06EV 闪充款"],
-            "腾势Z9GT": ["腾势 Z9GT 纯电"],
-            "随机车型": allCars.map(m => m.name),
-            "比亚迪2代兆瓦闪充": ["海狮 06EV 闪充款", "腾势 Z9GT 纯电", "仰望 U7 2026款", "方程豹钛 7EV"],
-            "超充≥ 250kW": ["海狮 06EV 闪充款", "腾势 Z9GT 纯电", "仰望 U7 2026款"],
-            "快充1≥ 100kw": ["海狮 06EV 闪充款", "腾势 Z9GT 纯电"],
-            "快充/慢充<100kw": allCars.filter(m => m.maxP < 100).map(m => m.name)
-        };
-
-        let state = {
-            isRunning: false,
-            gridLimit: 160,
-            cabinetCount: 2,
-            maxKwh: 370,
-            curKwh: 370,
-            pauseWhenEmpty: true,
-            selectedType: '26款海狮06',
-            intervalMode: 1,
-            timeSpeed: 1,
-            nextCarTime: 0,
-            arrivalQueue: 0,
-            totalFinished: 0,
-            totalSimMinutes: 0,
-            totalRevenue: 0,
-            timer: null,
-            guns: {
-                A: {
-                    id: 'A',
-                    charging: false,
-                    soc: 10,
-                    pwr: 0,
-                    car: null
-                },
-                B: {
-                    id: 'B',
-                    charging: false,
-                    soc: 10,
-                    pwr: 0,
-                    car: null
-                }
-            }
-        };
-
-        function resetSystem() {
-            if (state.timer) clearTimeout(state.timer);
-            state.isRunning = false;
-            state.curKwh = state.maxKwh;
-            state.totalFinished = 0;
-            state.nextCarTime = 0;
-            state.arrivalQueue = 0;
-            state.totalSimMinutes = 0;
-            state.totalRevenue = 0;
-            Object.values(state.guns).forEach(g => {
-                g.charging = false;
-                g.pwr = 0;
-                g.car = null;
-            });
-            document.getElementById('main-btn').innerText = "启动 1500kW 压力测试";
-            document.getElementById('main-btn').classList.remove('stop');
-            document.getElementById('ui-total-count').innerText = "0";
-            document.getElementById('ui-revenue').innerText = "¥0.00";
-            document.getElementById('ui-sim-time').innerText = "0 天 0 小时 0 分";
-            updateUI();
-            Object.values(ctxs).forEach(ctx => ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height));
-        }
-
-        function closeEnergyModal() {
-            document.getElementById('energy-modal').style.display = 'none';
-        }
-
-        function closeBankruptModal() {
-            document.getElementById('bankrupt-modal').style.display = 'none';
-            resetSystem();
-        }
-
-        window.changeGrid = (v) => {
-            state.gridLimit = v;
-            updateBtns('g', v);
-            resetSystem();
-        };
-        window.changeStorage = (v) => {
-            state.cabinetCount = v;
-            state.maxKwh = v * 185;
-            document.getElementById('ui-st-tag').innerText = `比亚迪 ${v}柜储能阵列`;
-            updateBtns('s', v);
-            resetSystem();
-        };
-        window.setPauseMode = (v) => {
-            state.pauseWhenEmpty = v;
-            updateBtns('pm', v);
-            resetSystem();
-        };
-        window.setIntervalMode = (v) => {
-            state.intervalMode = v;
-            updateBtns('int', v);
-            resetSystem();
-        };
-        window.setTimeSpeed = (v) => {
-            state.timeSpeed = v;
-            updateBtns('speed', v);
-            resetSystem();
-        };
-        window.changeCarType = (v) => {
-            state.selectedType = v;
-            resetSystem();
-        };
-
-        function updateBtns(prefix, val) {
-            document.querySelectorAll(`[id^="${prefix}-"]`).forEach(b => b.classList.remove('active-g', 'active-s'));
-            document.getElementById(`${prefix}-${val}`).classList.add(prefix === 'pm' ? 'active-s' : (prefix === 's' ? 'active-s' : 'active-g'));
-        }
-
-        const carBtnGroup = document.getElementById('car-type-btns');
-        Object.keys(carTypeLists).forEach(type => {
-            const btn = document.createElement('div');
-            btn.className = `opt-btn ${type === state.selectedType ? 'active-g' : ''}`;
-            btn.innerText = type;
-            btn.onclick = () => {
-                document.querySelectorAll('#car-type-btns .opt-btn').forEach(b => b.classList.remove('active-g'));
-                btn.classList.add('active-g');
-                window.changeCarType(type);
+            const carTypeLists = {
+                "比亚迪宋Ultra EV": ["比亚迪宋Ultra EV"],
+                "26款海狮06": ["海狮 06EV 闪充款"],
+                "腾势Z9GT": ["腾势 Z9GT 纯电"],
+                "随机车型": allCars.map(m => m.name),
+                "比亚迪2代兆瓦闪充": ["海狮 06EV 闪充款", "腾势 Z9GT 纯电", "仰望 U7 2026款", "方程豹钛 7EV", "比亚迪宋Ultra EV"],
+                "超充≥ 250kW": ["海狮 06EV 闪充款", "腾势 Z9GT 纯电", "仰望 U7 2026款", "比亚迪宋Ultra EV"],
+                "快充1≥ 100kw": ["海狮 06EV 闪充款", "腾势 Z9GT 纯电", "比亚迪宋Ultra EV"],
+                "快充/慢充<100kw": allCars.filter(m => m.maxP < 100).map(m => m.name)
             };
-            carBtnGroup.appendChild(btn);
-        });
 
-        const ctxs = {
-            grid: document.getElementById('cvs-1').getContext('2d'),
-            storage: document.getElementById('cvs-2').getContext('2d'),
-            output: document.getElementById('cvs-3').getContext('2d')
-        };
-
-        function resize() {
-            Object.values(ctxs).forEach(ctx => {
-                ctx.canvas.width = ctx.canvas.offsetWidth * devicePixelRatio;
-                ctx.canvas.height = ctx.canvas.offsetHeight * devicePixelRatio;
-                ctx.scale(devicePixelRatio, devicePixelRatio);
-            });
-        }
-        window.onresize = resize;
-        resize();
-
-        function drawLightning(ctx, pwr, color) {
-            const w = ctx.canvas.width / devicePixelRatio;
-            const h = ctx.canvas.height / devicePixelRatio;
-            ctx.clearRect(0, 0, w, h);
-            if (pwr < 10) return;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1.2 + (pwr / 500);
-            ctx.beginPath();
-            let x = w / 2;
-            ctx.moveTo(x, 0);
-            for (let y = 5; y <= h; y += 5) {
-                x += (Math.random() - 0.5) * (15 + (pwr / 120));
-                ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-        }
-
-        function getCurve(soc, maxP) {
-            if (soc < 20) return Math.min(maxP, 600 + (maxP - 600) * ((soc - 10) / 10));
-            if (soc < 75) return maxP - (Math.random() * 20);
-            if (soc < 90) return maxP * 0.5;
-            return maxP * 0.15;
-        }
-
-        function toggleSim() {
-            if (state.isRunning) {
-                resetSystem();
-            } else {
-                state.isRunning = true;
-                state.nextCarTime = Date.now() + 500;
-                document.getElementById('main-btn').innerText = "停止并清零";
-                document.getElementById('main-btn').classList.add('stop');
-                loop();
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('ui-grid-pwr').innerHTML = `${state.gridLimit}<span class="unit">kW</span>`;
-            document.getElementById('ui-st-soc').innerText = (state.curKwh / state.maxKwh * 100).toFixed(1) + "%";
-            document.getElementById('ui-st-kwh').innerText = `${state.curKwh.toFixed(1)} kWh`;
-            document.getElementById('ui-st-bar').style.width = (state.curKwh / state.maxKwh * 100) + "%";
-
-            let d = Math.floor(state.totalSimMinutes / 1440);
-            let h = Math.floor((state.totalSimMinutes % 1440) / 60);
-            let m = Math.floor(state.totalSimMinutes % 60);
-            document.getElementById('ui-sim-time').innerText = `${d}天 ${h}时 ${m}分`;
-            document.getElementById('ui-revenue').innerText = `¥${state.totalRevenue.toFixed(2)}`;
-
-            ['A', 'B'].forEach(id => {
-                const gun = state.guns[id];
-                const prefix = `ui-car-${id}`;
-                if (gun.charging && gun.car) {
-                    document.getElementById(`${prefix}-model`).innerText = gun.car.name;
-                    document.getElementById(`${prefix}-soc`).innerText = gun.soc.toFixed(1) + "%";
-                    document.getElementById(`${prefix}-pwr`).innerHTML = `${gun.pwr.toFixed(0)}<span class="unit">kW</span>`;
-                    document.getElementById(`${prefix}-bar`).style.width = gun.soc + "%";
-                    if (gun.pwr > 900) document.getElementById(`node-gun-${id}`).classList.add('extreme-shake');
-                    else document.getElementById(`node-gun-${id}`).classList.remove('extreme-shake');
-                } else {
-                    document.getElementById(`${prefix}-model`).innerText = "空闲等待";
-                    document.getElementById(`${prefix}-soc`).innerText = "--";
-                    document.getElementById(`${prefix}-pwr`).innerHTML = `0<span class="unit">kW</span>`;
-                    document.getElementById(`${prefix}-bar`).style.width = "0%";
-                    document.getElementById(`node-gun-${id}`).classList.remove('extreme-shake');
-                }
-            });
-        }
-
-        function loop() {
-            if (!state.isRunning) return;
-            const dt = 0.15; // 基础仿真步长
-            const now = Date.now();
-
-            state.totalSimMinutes += dt * state.timeSpeed;
-
-            if (state.arrivalQueue > 20) {
-                state.isRunning = false;
-                document.getElementById('bankrupt-modal').style.display = 'flex';
-                return;
-            }
-
-            if (state.curKwh <= 0 && state.pauseWhenEmpty) {
-                state.isRunning = false;
-                document.getElementById('energy-modal').style.display = 'block';
-                return;
-            }
-
-            if (now > state.nextCarTime) {
-                state.arrivalQueue++;
-                let minM, maxM;
-                switch (state.intervalMode) {
-                    case 1:
-                        minM = 3;
-                        maxM = 6;
-                        break;
-                    case 2:
-                        minM = 3;
-                        maxM = 15;
-                        break;
-                    case 3:
-                        minM = 3;
-                        maxM = 30;
-                        break;
-                    case 4:
-                        minM = 3;
-                        maxM = 60;
-                        break;
-                }
-                state.nextCarTime = now + ((minM * 333.3) / state.timeSpeed) + Math.random() * (((maxM - minM) * 333.3) / state.timeSpeed);
-            }
-
-            ['A', 'B'].forEach(id => {
-                let g = state.guns[id];
-                if (state.arrivalQueue > 0 && !g.charging) {
-                    const list = carTypeLists[state.selectedType];
-                    const carName = list[Math.floor(Math.random() * list.length)];
-                    g.car = allCars.find(m => m.name === carName) || allCars[0];
-                    g.soc = 10;
-                    g.charging = true;
-                    state.arrivalQueue--;
-                }
-            });
-
-            document.getElementById('ui-sys-msg').innerText = state.arrivalQueue > 0 ? `❗ 排队: ${state.arrivalQueue} 辆` : `⏱️ 下辆预计: ${Math.ceil((state.nextCarTime - now) / 1000 * 3 * state.timeSpeed)} 分`;
-
-            let totalReq = 0;
-            Object.values(state.guns).forEach(g => {
-                if (g.charging) {
-                    g.pwr = getCurve(g.soc, g.car.maxP);
-                    totalReq += g.pwr;
-                }
-            });
-
-            const SYSTEM_MAX = 1500;
-            let actualTotal = totalReq;
-            if (totalReq > SYSTEM_MAX) {
-                let r = SYSTEM_MAX / totalReq;
-                Object.values(state.guns).forEach(g => {
-                    if (g.charging) g.pwr *= r;
-                });
-                actualTotal = SYSTEM_MAX;
-            }
-
-            let fromGrid = Math.min(actualTotal, state.gridLimit);
-            let fromStorage = Math.max(0, actualTotal - fromGrid);
-
-            if (state.curKwh <= 0) {
-                fromStorage = 0;
-                let cap = state.gridLimit / (actualTotal || 1);
-                Object.values(state.guns).forEach(g => {
-                    if (g.charging) g.pwr *= cap;
-                });
-                actualTotal = fromGrid;
-            }
-
-            // 服务费计算：度 * 0.5元
-            let usedKwh = (actualTotal / 60) * dt * state.timeSpeed;
-            state.totalRevenue += usedKwh * 0.5;
-
-            Object.values(state.guns).forEach(g => {
-                if (g.charging) {
-                    g.soc += ((g.pwr / 60) * dt * state.timeSpeed / g.car.battery) * 100;
-                    if (g.soc >= 98) {
-                        g.charging = false;
-                        g.car = null;
-                        state.totalFinished++;
-                        document.getElementById('ui-total-count').innerText = state.totalFinished;
+            let state = {
+                isRunning: false,
+                gridLimit: 160,
+                cabinetCount: 2,
+                maxKwh: 370,
+                curKwh: 370,
+                pauseWhenEmpty: true,
+                selectedType: '26款海狮06',
+                intervalMode: 1,
+                timeSpeed: 1,
+                nextCarTime: 0,
+                arrivalQueue: 0,
+                totalFinished: 0,
+                totalSimMinutes: 0,
+                totalRevenue: 0,
+                timer: null,
+                guns: {
+                    A: {
+                        id: 'A',
+                        charging: false,
+                        soc: 10,
+                        pwr: 0,
+                        car: null
+                    },
+                    B: {
+                        id: 'B',
+                        charging: false,
+                        soc: 10,
+                        pwr: 0,
+                        car: null
                     }
                 }
+            };
+
+            function resetSystem() {
+                if (state.timer) clearTimeout(state.timer);
+                state.isRunning = false;
+                state.curKwh = state.maxKwh;
+                state.totalFinished = 0;
+                state.nextCarTime = 0;
+                state.arrivalQueue = 0;
+                state.totalSimMinutes = 0;
+                state.totalRevenue = 0;
+                Object.values(state.guns).forEach(g => {
+                    g.charging = false;
+                    g.pwr = 0;
+                    g.car = null;
+                });
+                document.getElementById('main-btn').innerText = "启动 1500kW 压力测试";
+                document.getElementById('main-btn').classList.remove('stop');
+                document.getElementById('reset-btn').style.display = 'none';
+                document.getElementById('ui-total-count').innerText = "0";
+                document.getElementById('ui-revenue').innerText = "¥0.00";
+                document.getElementById('ui-sim-time').innerText = "0 天 0 小时 0 分";
+                updateUI();
+                Object.values(ctxs).forEach(ctx => ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height));
+            }
+
+            function closeEnergyModal() {
+                document.getElementById('energy-modal').style.display = 'none';
+                // 1. 切换逻辑：改为继续运行模式
+                state.pauseWhenEmpty = false;
+                // 2. 更新设置面板中的按钮高亮状态
+                updateBtns('pm', false);
+                // 3. 恢复运行状态并重新启动循环
+                if (!state.isRunning) {
+                    state.isRunning = true;
+                    document.getElementById('main-btn').innerText = "停止并清零";
+                    document.getElementById('main-btn').classList.add('stop');
+                    document.getElementById('reset-btn').style.display = 'none';
+                    loop();
+                }
+            }
+
+            function closeBankruptModal() {
+                document.getElementById('bankrupt-modal').style.display = 'none';
+                resetSystem();
+            }
+
+            window.changeGrid = (v) => {
+                state.gridLimit = v;
+                updateBtns('g', v);
+                resetSystem();
+            };
+            window.changeStorage = (v) => {
+                state.cabinetCount = v;
+                state.maxKwh = v * 185;
+                document.getElementById('ui-st-tag').innerText = `🔋 比亚迪 ${v}柜储能阵列`;
+                updateBtns('s', v);
+                resetSystem();
+            };
+            window.setPauseMode = (v) => {
+                state.pauseWhenEmpty = v;
+                updateBtns('pm', v);
+                // 如果是从暂停改为继续，且系统正在运行，不要重置
+                if (!v && state.isRunning) {
+                    // 不重置，保持当前数据
+                } else {
+                    resetSystem();
+                }
+            };
+            window.setIntervalMode = (v) => {
+                state.intervalMode = v;
+                updateBtns('int', v);
+                resetSystem();
+            };
+            window.setTimeSpeed = (v) => {
+                state.timeSpeed = v;
+                updateBtns('speed', v);
+                resetSystem();
+            };
+            window.changeCarType = (v) => {
+                state.selectedType = v;
+                resetSystem();
+            };
+
+            // 检测设置面板是否需要滚动
+            function checkSettingsScroll() {
+                const settingsPanel = document.querySelector('.settings-panel');
+                const settingsContent = settingsPanel.querySelector('.settings-content');
+                const scrollHeight = settingsContent ? settingsContent.scrollHeight : settingsPanel.scrollHeight;
+                const clientHeight = settingsPanel.clientHeight;
+
+                if (scrollHeight <= clientHeight) {
+                    settingsPanel.classList.add('no-scroll');
+                } else {
+                    settingsPanel.classList.remove('no-scroll');
+                }
+            }
+
+            // 更新滚动提示
+            function updateScrollHints() {
+                const settingsPanel = document.querySelector('.settings-panel');
+                const settingsContent = settingsPanel.querySelector('.settings-content');
+                const scrollHeight = settingsContent ? settingsContent.scrollHeight : settingsPanel.scrollHeight;
+                const clientHeight = settingsPanel.clientHeight;
+                const scrollTop = settingsPanel.scrollTop;
+
+                if (scrollHeight <= clientHeight) {
+                    // 内容不超出，隐藏所有提示
+                    settingsPanel.classList.add('no-scroll');
+                } else {
+                    settingsPanel.classList.remove('no-scroll');
+
+                    // 根据滚动位置显示相应提示
+                    const beforeHint = settingsPanel.querySelector('::before') || settingsPanel;
+                    const afterHint = settingsPanel.querySelector('::after') || settingsPanel;
+
+                    if (scrollTop >= scrollHeight - clientHeight - 10) {
+                        // 滚动到底部，显示向上提示
+                        settingsPanel.style.setProperty('--show-before', '1');
+                        settingsPanel.style.setProperty('--show-after', '0');
+                    } else if (scrollTop <= 10) {
+                        // 滚动到顶部，显示向下提示
+                        settingsPanel.style.setProperty('--show-before', '0');
+                        settingsPanel.style.setProperty('--show-after', '1');
+                    } else {
+                        // 中间位置，显示向下提示
+                        settingsPanel.style.setProperty('--show-before', '0');
+                        settingsPanel.style.setProperty('--show-after', '1');
+                    }
+                }
+            }
+
+            // 初始化时检测
+            setTimeout(checkSettingsScroll, 100);
+
+            // 监听滚动事件
+            document.addEventListener('DOMContentLoaded', function () {
+                const settingsPanel = document.querySelector('.settings-panel');
+                if (settingsPanel) {
+                    settingsPanel.addEventListener('scroll', updateScrollHints);
+                    // 初始化提示状态
+                    updateScrollHints();
+                }
             });
 
-            if (fromStorage > 0) state.curKwh -= (fromStorage / 60) * dt * state.timeSpeed;
-            else if (actualTotal < state.gridLimit) {
-                let rec = Math.min(state.gridLimit - actualTotal, 200);
-                state.curKwh += (rec / 60) * dt * state.timeSpeed;
+            function updateBtns(prefix, val) {
+                document.querySelectorAll(`[id^="${prefix}-"]`).forEach(b => b.classList.remove('active-g', 'active-s'));
+                document.getElementById(`${prefix}-${val}`).classList.add(prefix === 'pm' ? 'active-s' : (prefix === 's' ? 'active-s' : 'active-g'));
             }
-            state.curKwh = Math.min(state.maxKwh, Math.max(0, state.curKwh));
 
-            document.getElementById('ui-st-out').innerText = fromStorage.toFixed(0);
-            document.getElementById('ui-total-pwr').innerHTML = `${actualTotal.toFixed(0)}<span class="unit">kW</span>`;
-            document.getElementById('ui-total-bar').style.width = (actualTotal / SYSTEM_MAX * 100) + "%";
+            const carBtnGroup = document.getElementById('car-type-btns');
+            Object.keys(carTypeLists).forEach(type => {
+                const btn = document.createElement('div');
+                btn.className = `opt-btn ${type === state.selectedType ? 'active-g' : ''}`;
+                btn.innerText = type;
+                btn.onclick = () => {
+                    document.querySelectorAll('#car-type-btns .opt-btn').forEach(b => b.classList.remove('active-g'));
+                    btn.classList.add('active-g');
+                    window.changeCarType(type);
+                };
+                carBtnGroup.appendChild(btn);
+            });
 
-            updateUI();
-            drawLightning(ctxs.grid, actualTotal > 0 ? fromGrid : 0, '#00d2ff');
-            drawLightning(ctxs.storage, fromStorage, '#00ff88');
-            drawLightning(ctxs.output, actualTotal, '#ffff00');
-            state.timer = setTimeout(loop, 50);
-        }
-    </script>
+            const ctxs = {
+                grid: document.getElementById('cvs-1').getContext('2d'),
+                storage: document.getElementById('cvs-2').getContext('2d'),
+                output: document.getElementById('cvs-3').getContext('2d')
+            };
+
+            function resize() {
+                Object.values(ctxs).forEach(ctx => {
+                    ctx.canvas.width = ctx.canvas.offsetWidth * devicePixelRatio;
+                    ctx.canvas.height = ctx.canvas.offsetHeight * devicePixelRatio;
+                    ctx.scale(devicePixelRatio, devicePixelRatio);
+                });
+            }
+            window.onresize = resize;
+            resize();
+
+            function drawLightning(ctx, pwr, color) {
+                const w = ctx.canvas.width / devicePixelRatio;
+                const h = ctx.canvas.height / devicePixelRatio;
+                ctx.clearRect(0, 0, w, h);
+                if (pwr < 10) return;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.2 + (pwr / 500);
+                ctx.beginPath();
+                let x = w / 2;
+                ctx.moveTo(x, 0);
+                for (let y = 5; y <= h; y += 5) {
+                    x += (Math.random() - 0.5) * (15 + (pwr / 120));
+                    ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            function getCurve(soc, maxP) {
+                if (soc < 20) return Math.min(maxP, 600 + (maxP - 600) * ((soc - 10) / 10));
+                if (soc < 75) return maxP - (Math.random() * 20);
+                if (soc < 90) return maxP * 0.5;
+                return maxP * 0.15;
+            }
+
+            function toggleSim() {
+                if (state.isRunning) {
+                    resetSystem();
+                } else {
+                    // 如果当前是因为枯竭而停止（弹窗显示中，或者按钮显示为"继续"）
+                    const isDepletedPause = state.curKwh <= 0 && document.getElementById('main-btn').innerText === "继续";
+
+                    if (isDepletedPause) {
+                        // 切换为继续逻辑
+                        state.pauseWhenEmpty = false;
+                        updateBtns('pm', false); // 同步更新设置面板按钮
+                        document.getElementById('energy-modal').style.display = 'none';
+                    }
+
+                    state.isRunning = true;
+                    // 如果是全新的启动，设置下辆车时间；如果是恢复，则保持现状
+                    if (state.totalSimMinutes === 0) {
+                        state.nextCarTime = Date.now() + 500;
+                    }
+
+                    document.getElementById('main-btn').innerText = "停止并清零";
+                    document.getElementById('main-btn').classList.add('stop');
+                    document.getElementById('reset-btn').style.display = 'none';
+                    loop();
+                }
+            }
+
+            function updateUI() {
+                document.getElementById('ui-grid-pwr').innerHTML = `${state.gridLimit}<span class="unit">kW</span>`;
+                document.getElementById('ui-st-soc').innerText = (state.curKwh / state.maxKwh * 100).toFixed(1) + "%";
+                document.getElementById('ui-st-kwh').innerText = `${state.curKwh.toFixed(1)} kWh`;
+                document.getElementById('ui-st-bar').style.width = (state.curKwh / state.maxKwh * 100) + "%";
+
+                let d = Math.floor(state.totalSimMinutes / 1440);
+                let h = Math.floor((state.totalSimMinutes % 1440) / 60);
+                let m = Math.floor(state.totalSimMinutes % 60);
+                document.getElementById('ui-sim-time').innerText = `${d}天 ${h}时 ${m}分`;
+                document.getElementById('ui-revenue').innerText = `¥${state.totalRevenue.toFixed(2)}`;
+
+                ['A', 'B'].forEach(id => {
+                    const gun = state.guns[id];
+                    const prefix = `ui-car-${id}`;
+                    if (gun.charging && gun.car) {
+                        document.getElementById(`${prefix}-model`).innerText = gun.car.name;
+                        document.getElementById(`${prefix}-soc`).innerText = gun.soc.toFixed(1) + "%";
+                        document.getElementById(`${prefix}-pwr`).innerHTML = `${gun.pwr.toFixed(0)}<span class="unit">kW</span>`;
+                        document.getElementById(`${prefix}-bar`).style.width = gun.soc + "%";
+
+                        // 更新充电状态显示
+                        let statusText = "";
+                        if (gun.pwr >= 1000) {
+                            statusText = "⚡ 兆瓦闪充";
+                        } else if (gun.pwr >= 480) {
+                            statusText = "🔥 闪充";
+                        } else if (gun.pwr >= 250) {
+                            statusText = "🚀 超充";
+                        } else {
+                            statusText = "🔌 充电中";
+                        }
+                        document.getElementById(`${prefix}-info`).innerText = statusText;
+
+                        if (gun.pwr > 900) document.getElementById(`node-gun-${id}`).classList.add('extreme-shake');
+                        else document.getElementById(`node-gun-${id}`).classList.remove('extreme-shake');
+                    } else {
+                        document.getElementById(`${prefix}-model`).innerText = "空闲等待";
+                        document.getElementById(`${prefix}-soc`).innerText = "--";
+                        document.getElementById(`${prefix}-pwr`).innerHTML = `0<span class="unit">kW</span>`;
+                        document.getElementById(`${prefix}-bar`).style.width = "0%";
+                        document.getElementById(`${prefix}-info`).innerText = "⏸️ 待机";
+                        document.getElementById(`node-gun-${id}`).classList.remove('extreme-shake');
+                    }
+                });
+            }
+
+            function loop() {
+                if (!state.isRunning) return;
+                const dt = 0.15; // 基础仿真步长
+                const now = Date.now();
+
+                state.totalSimMinutes += dt * state.timeSpeed;
+
+                if (state.arrivalQueue > 100) {
+                    state.isRunning = false;
+                    document.getElementById('bankrupt-modal').style.display = 'flex';
+                    return;
+                }
+
+                if (state.curKwh <= 0 && state.pauseWhenEmpty) {
+                    state.isRunning = false;
+                    document.getElementById('energy-modal').style.display = 'block';
+                    document.getElementById('main-btn').innerText = "继续";
+                    document.getElementById('main-btn').classList.remove('stop');
+                    document.getElementById('reset-btn').style.display = 'block';
+                    return;
+                }
+
+                if (now > state.nextCarTime) {
+                    state.arrivalQueue++;
+                    let minM, maxM;
+                    switch (state.intervalMode) {
+                        case 1:
+                            minM = 3;
+                            maxM = 6;
+                            break;
+                        case 2:
+                            minM = 3;
+                            maxM = 15;
+                            break;
+                        case 3:
+                            minM = 3;
+                            maxM = 30;
+                            break;
+                        case 4:
+                            minM = 3;
+                            maxM = 60;
+                            break;
+                    }
+                    state.nextCarTime = now + ((minM * 333.3) / state.timeSpeed) + Math.random() * (((maxM - minM) * 333.3) / state.timeSpeed);
+                }
+
+                ['A', 'B'].forEach(id => {
+                    let g = state.guns[id];
+                    if (state.arrivalQueue > 0 && !g.charging) {
+                        const list = carTypeLists[state.selectedType];
+                        const carName = list[Math.floor(Math.random() * list.length)];
+                        g.car = allCars.find(m => m.name === carName) || allCars[0];
+                        g.soc = 10;
+                        g.charging = true;
+                        state.arrivalQueue--;
+                    }
+                });
+
+                document.getElementById('ui-sys-msg').innerText = state.arrivalQueue > 0 ? `❗ 排队: ${state.arrivalQueue} 辆` : `⏱️ 下辆预计: ${Math.ceil((state.nextCarTime - now) / 1000 * 3 * state.timeSpeed)} 分`;
+
+                let totalReq = 0;
+                Object.values(state.guns).forEach(g => {
+                    if (g.charging) {
+                        g.pwr = getCurve(g.soc, g.car.maxP);
+                        totalReq += g.pwr;
+                    }
+                });
+
+                const SYSTEM_MAX = 1500;
+                let actualTotal = totalReq;
+                if (totalReq > SYSTEM_MAX) {
+                    let r = SYSTEM_MAX / totalReq;
+                    Object.values(state.guns).forEach(g => {
+                        if (g.charging) g.pwr *= r;
+                    });
+                    actualTotal = SYSTEM_MAX;
+                }
+
+                let fromGrid = Math.min(actualTotal, state.gridLimit);
+                let fromStorage = Math.max(0, actualTotal - fromGrid);
+
+                if (state.curKwh <= 0) {
+                    fromStorage = 0;
+                    let cap = state.gridLimit / (actualTotal || 1);
+                    Object.values(state.guns).forEach(g => {
+                        if (g.charging) g.pwr *= cap;
+                    });
+                    actualTotal = fromGrid;
+                }
+
+                // 服务费计算：度 * 0.5元
+                let usedKwh = (actualTotal / 60) * dt * state.timeSpeed;
+                state.totalRevenue += usedKwh * 0.5;
+
+                Object.values(state.guns).forEach(g => {
+                    if (g.charging) {
+                        g.soc += ((g.pwr / 60) * dt * state.timeSpeed / g.car.battery) * 100;
+                        if (g.soc >= 98) {
+                            g.charging = false;
+                            g.car = null;
+                            state.totalFinished++;
+                            document.getElementById('ui-total-count').innerText = state.totalFinished;
+                        }
+                    }
+                });
+
+                if (fromStorage > 0) state.curKwh -= (fromStorage / 60) * dt * state.timeSpeed;
+                else if (actualTotal < state.gridLimit) {
+                    let rec = Math.min(state.gridLimit - actualTotal, 200);
+                    state.curKwh += (rec / 60) * dt * state.timeSpeed;
+                }
+                state.curKwh = Math.min(state.maxKwh, Math.max(0, state.curKwh));
+
+                document.getElementById('ui-st-out').innerText = fromStorage.toFixed(0);
+                document.getElementById('ui-total-pwr').innerHTML = `${actualTotal.toFixed(0)}<span class="unit">kW</span>`;
+                document.getElementById('ui-total-bar').style.width = (actualTotal / SYSTEM_MAX * 100) + "%";
+
+                updateUI();
+                drawLightning(ctxs.grid, actualTotal > 0 ? fromGrid : 0, '#00d2ff');
+                drawLightning(ctxs.storage, fromStorage, '#00ff88');
+                drawLightning(ctxs.output, actualTotal, '#ffff00');
+                state.timer = setTimeout(loop, 50);
+            }
+        </script>
+
+        <!-- 底部提示 -->
+        <div
+            style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 204, 0, 0.9); color: #000; text-align: center; padding: 8px; font-weight: bold; font-size: 14px; z-index: 1000; border-top: 2px solid #ffcc00;">
+            抖音号：🚗 空空空（海狮06首批车主）
+        </div>
+    </div>
 </body>
 
 </html>
