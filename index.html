@@ -22,6 +22,10 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        .settings-panel {
+            padding-bottom: 40px !important;
+        }
+
         body {
             margin: 0;
             background: #000;
@@ -49,6 +53,8 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            padding-bottom: 40px;
+            /* 为底部固定提示栏留出空间 */
         }
 
         @media (max-width: 768px) {
@@ -58,6 +64,8 @@
 
             .main-container {
                 height: 70vh;
+                padding-bottom: 30px;
+                /* 移动端为底部提示栏留出空间 */
             }
 
             .settings-panel {
@@ -71,7 +79,23 @@
             }
 
             .gun-node {
-                padding: 6px;
+                /* padding: 6px; 由.node提供 */
+                min-height: 80px;
+                /* 小屏幕上稍小的高度 */
+            }
+
+            .node {
+                min-height: 80px;
+                /* 小屏幕上稍小的高度 */
+                padding: 18px 10px 10px 10px;
+                /* 调整内边距 */
+            }
+
+            .tag {
+                top: -10px;
+                left: 8px;
+                font-size: 11px;
+                padding: 3px 8px;
             }
 
             .opt-group {
@@ -219,20 +243,29 @@
         .node {
             background: var(--card);
             border-radius: 10px;
-            padding: 8px 12px;
+            padding: 20px 12px 12px 12px;
+            /* 增加上内边距以容纳标签 */
             border: 1px solid #21262d;
             position: relative;
             margin-bottom: 2px;
+            min-height: 90px;
+            /* 固定最小高度防止闪屏 */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
         }
 
         .tag {
             position: absolute;
-            top: -10px;
+            top: -12px;
             left: 12px;
             font-size: 13px;
-            padding: 2px 10px;
+            padding: 4px 12px;
             border-radius: 4px;
             font-weight: 900;
+            z-index: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
         }
 
         .flow-container {
@@ -281,7 +314,7 @@
 
         .gun-node {
             flex: 1;
-            padding: 8px;
+            /* padding: 8px; 由.node提供 */
         }
 
         .car-model-min {
@@ -339,7 +372,7 @@
             gap: 4px;
             border-top: 1px solid #222;
             overflow-y: auto;
-            max-height: 40vh;
+            max-height: 34vh;
             position: relative;
         }
 
@@ -365,7 +398,7 @@
         .settings-panel::after {
             content: "⬇️ 向下滑动查看更多配置";
             position: absolute;
-            bottom: 5px;
+            bottom: 45px;
             left: 50%;
             transform: translateX(-50%);
             font-size: 10px;
@@ -492,7 +525,7 @@
 
                 <div class="power-row">
                     <div class="node" id="node-storage" style="border-left: 4px solid var(--storage); flex: 1;">
-                        <div class="tag" id="ui-st-tag" style="background:var(--storage); color:#000">🔋 比亚迪 2柜储能阵列
+                        <div class="tag" id="ui-st-tag" style="background:var(--storage); color:#000">🔋 2柜储能阵列
                         </div>
                         <div class="val-row">
                             <div class="val" id="ui-st-soc" style="color:var(--storage)">100%</div>
@@ -504,6 +537,7 @@
                     </div>
                     <div class="flow-container"><canvas id="cvs-2"></canvas></div>
                     <div class="node" style="border-left: 4px solid #ff6b6b; flex: 1;">
+                        <div class="tag" style="background:#ff6b6b; color:#000">📊 实时输出</div>
                         <div class="val-row">
                             <div class="val" style="color:#ff6b6b" id="ui-total-pwr">0<span class="unit">kW</span></div>
                             <div id="ui-sys-msg" style="font-size: 10px; color:#ff6b6b; font-weight:900;">准备就绪</div>
@@ -603,8 +637,19 @@
                     </div>
                 </div>
 
+                <div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 8px;">
+                    <div>
+                        <div style="font-size:9px; color:#555; margin-bottom:2px">🔌 充电枪模式</div>
+                        <div class="opt-group">
+                            <div class="opt-btn" id="gun-single" onclick="setGunMode('single')">单枪</div>
+                            <div class="opt-btn active-g" id="gun-dual" onclick="setGunMode('dual')">双枪</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="font-size:9px; color:#555; margin-bottom:2px">🚙 车型选择</div>
                 <div class="opt-group" id="car-type-btns"></div>
+                <div style="height: 40px;"></div>
             </div>
         </div>
 
@@ -684,6 +729,7 @@
                 selectedType: '26款海狮06',
                 intervalMode: 1,
                 timeSpeed: 1,
+                gunMode: 'dual', // 默认双枪
                 nextCarTime: 0,
                 arrivalQueue: 0,
                 totalFinished: 0,
@@ -760,8 +806,8 @@
             };
             window.changeStorage = (v) => {
                 state.cabinetCount = v;
-                state.maxKwh = v * 185;
-                document.getElementById('ui-st-tag').innerText = `🔋 比亚迪 ${v}柜储能阵列`;
+                state.maxKwh = v * 200;
+                document.getElementById('ui-st-tag').innerText = `🔋 ${v}柜储能阵列`;
                 updateBtns('s', v);
                 resetSystem();
             };
@@ -783,6 +829,11 @@
             window.setTimeSpeed = (v) => {
                 state.timeSpeed = v;
                 updateBtns('speed', v);
+                resetSystem();
+            };
+            window.setGunMode = (v) => {
+                state.gunMode = v;
+                updateBtns('gun', v === 'dual' ? 'dual' : 'single');
                 resetSystem();
             };
             window.changeCarType = (v) => {
@@ -904,7 +955,7 @@
 
             function getCurve(soc, maxP) {
                 if (soc < 20) return Math.min(maxP, 600 + (maxP - 600) * ((soc - 10) / 10));
-                if (soc < 75) return maxP - (Math.random() * 20);
+                if (soc < 70) return maxP - (Math.random() * 20);
                 if (soc < 90) return maxP * 0.5;
                 return maxP * 0.15;
             }
@@ -948,7 +999,8 @@
                 document.getElementById('ui-sim-time').innerText = `${d}天 ${h}时 ${m}分`;
                 document.getElementById('ui-revenue').innerText = `¥${state.totalRevenue.toFixed(2)}`;
 
-                ['A', 'B'].forEach(id => {
+                const gunIds = state.gunMode === 'single' ? ['A'] : ['A', 'B'];
+                gunIds.forEach(id => {
                     const gun = state.guns[id];
                     const prefix = `ui-car-${id}`;
                     if (gun.charging && gun.car) {
@@ -981,6 +1033,16 @@
                         document.getElementById(`node-gun-${id}`).classList.remove('extreme-shake');
                     }
                 });
+
+                // 单枪模式下设置B枪为禁用状态
+                if (state.gunMode === 'single') {
+                    document.getElementById('ui-car-B-model').innerText = "🔒 单枪模式";
+                    document.getElementById('ui-car-B-soc').innerText = "--";
+                    document.getElementById('ui-car-B-pwr').innerHTML = `0<span class="unit">kW</span>`;
+                    document.getElementById('ui-car-B-bar').style.width = "0%";
+                    document.getElementById('ui-car-B-info').innerText = "🔒 已禁用";
+                    document.getElementById('node-gun-B').classList.remove('extreme-shake');
+                }
             }
 
             function loop() {
@@ -1029,7 +1091,8 @@
                     state.nextCarTime = now + ((minM * 333.3) / state.timeSpeed) + Math.random() * (((maxM - minM) * 333.3) / state.timeSpeed);
                 }
 
-                ['A', 'B'].forEach(id => {
+                const gunIds = state.gunMode === 'single' ? ['A'] : ['A', 'B'];
+                gunIds.forEach(id => {
                     let g = state.guns[id];
                     if (state.arrivalQueue > 0 && !g.charging) {
                         const list = carTypeLists[state.selectedType];
@@ -1080,7 +1143,7 @@
                 Object.values(state.guns).forEach(g => {
                     if (g.charging) {
                         g.soc += ((g.pwr / 60) * dt * state.timeSpeed / g.car.battery) * 100;
-                        if (g.soc >= 98) {
+                        if (g.soc >= 97) {
                             g.charging = false;
                             g.car = null;
                             state.totalFinished++;
